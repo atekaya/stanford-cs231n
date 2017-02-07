@@ -173,7 +173,13 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # the momentum variable to update the running mean and running variance,    #
     # storing your result in the running_mean and running_var variables.        #
     #############################################################################
-    pass
+    sample_mean = x.mean(axis=0)
+    sample_var = x.std(axis=0)
+    running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+    running_var = momentum * running_var + (1 - momentum) * sample_var
+    x_c = (x - sample_mean) / np.sqrt((sample_var**2 + eps))
+    out = gamma * x_c + beta
+    cache = (x,x_c,gamma,sample_mean,sample_var,eps)
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -184,7 +190,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # and shift the normalized data using gamma and beta. Store the result in   #
     # the out variable.                                                         #
     #############################################################################
-    pass
+    out = gamma * ( (x - running_mean) / np.sqrt((running_var**2 + eps) )) + beta
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -220,7 +226,18 @@ def batchnorm_backward(dout, cache):
   # TODO: Implement the backward pass for batch normalization. Store the      #
   # results in the dx, dgamma, and dbeta variables.                           #
   #############################################################################
-  pass
+  x,x_c,g,sm,sv,eps=cache
+  N = dout.shape[0]  
+  dgamma = (dout*x_c).sum(axis=0)
+  dbeta = dout.sum(axis=0)
+    
+  dx_c = dout*(g)
+    
+  dvar = (-1/2.)*(dx_c*(x-sm)).sum(axis=0)*((sv**2+eps)**(-1.5))
+    
+  dm = -dx_c.sum(axis=0)/np.sqrt(sv**2+eps)
+    
+  dx = dx_c/np.sqrt(sv**2+eps) + dvar * 2 *(x-sm)/float(N) + dm/float(N)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
