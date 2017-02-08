@@ -268,18 +268,20 @@ class FullyConnectedNet(object):
     ############################################################################
     x=X
     cache_layer={}
+    dropout_cache={}
     for i in xrange(1,self.num_layers):
       if self.use_batchnorm:
         out,cache_layer[i] = affine_bn_relu_forward(x, self.params['W%d'%(i)], self.params['b%d'%(i)],self.params['gamma%d'%(i)],self.params['beta%d'%(i)],self.bn_params[i-1])
       else:
         out,cache_layer[i] = affine_relu_forward(x, self.params['W%d'%(i)], self.params['b%d'%(i)])
+      if self.use_dropout:
+        out, dropout_cache[i] = dropout_forward(out,self.dropout_param)
       x=out
     out,cache_layer[self.num_layers] = affine_forward(x, self.params['W%d'%(self.num_layers)], self.params['b%d'%(self.num_layers)])
     scores = out
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
-
     # If test mode return early
     if mode == 'test':
       return scores
@@ -304,6 +306,8 @@ class FullyConnectedNet(object):
     grads['W%d'%(self.num_layers)] += self.reg*self.params['W%d'%(self.num_layers)]
     for i in xrange(self.num_layers-1,0,-1):
       loss += 0.5*self.reg*(np.linalg.norm(self.params['W%d'%(i)])**2)
+      if self.use_dropout:
+        dx = dropout_backward(dx,dropout_cache[i])
       if self.use_batchnorm:
         dx, grads['W%d'%(i)],grads['b%d'%(i)], grads['gamma%d'%(i)],grads['beta%d'%(i)] = affine_bn_relu_backward(dx, cache_layer[i])
       else:
