@@ -380,7 +380,22 @@ def conv_forward_naive(x, w, b, conv_param):
   # TODO: Implement the convolutional forward pass.                           #
   # Hint: you can use the function np.pad for padding.                        #
   #############################################################################
-  pass
+  N, C, H, W = x.shape
+  F, C, HH, WW = w.shape
+  pad = conv_param['pad']
+  stride = conv_param['stride']
+  Hn = 1 + (H + 2 * pad - HH) / stride
+  Wn = 1 + (W + 2 * pad - WW) / stride
+  pad_width = [(0,0),(0,0),(pad,pad),(pad,pad)]
+  big_x = np.pad(x,pad_width=pad_width,mode='constant')
+  out = np.zeros((N, F, Hn, Wn))
+  for i in xrange(N):
+    for j in xrange(F):
+      for k in xrange(Hn):
+        pos_H = k * stride
+        for l in xrange(Wn):
+            pos_W = l * stride
+            out[i,j,k,l] = np.sum(big_x[i,:,pos_H:pos_H+HH,pos_W:pos_W+WW]*w[j]) + b[j]
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -405,7 +420,44 @@ def conv_backward_naive(dout, cache):
   #############################################################################
   # TODO: Implement the convolutional backward pass.                          #
   #############################################################################
-  pass
+  x, w, b, conv_param = cache
+  N, C, H, W = x.shape
+  F, C, HH, WW = w.shape
+  pad = conv_param['pad']
+  stride = conv_param['stride']
+  Hn = 1 + (H + 2 * pad - HH) / stride
+  Wn = 1 + (W + 2 * pad - WW) / stride
+  pad_width = [(0,0),(0,0),(pad,pad),(pad,pad)]
+
+  dw = np.zeros((F,C,HH,WW))
+  big_x = np.pad(x,pad_width=pad_width,mode='constant')
+  for f in xrange(F):
+    for i in xrange(N):
+      for k in xrange(Hn):
+        pos_H = k * stride
+        for l in xrange(Wn):
+          pos_W = l * stride
+          dw[f] += dout[i,f,k,l]*big_x[i,:,pos_H:pos_H+HH,pos_W:pos_W+WW]
+
+  dbig_x = np.zeros((N,C,H+2*pad,W+2*pad))
+  """
+  for i in xrange(N):
+    for k in xrange(H+2*pad):
+      for l in xrange(W+2*pad):
+        dbig_x = big_x[i,,]
+  """
+  for i in xrange(N):
+    for j in xrange(F):
+      for k in xrange(Hn):
+        pos_H = k * stride
+        for l in xrange(Wn):
+            pos_W = l * stride
+            dbig_x[i,:,pos_H:pos_H+HH,pos_W:pos_W+WW] += dout[i,j,k,l]*w[j]
+  dx = dbig_x[:,:,pad:-pad,pad:-pad]
+  db = np.zeros(F)
+  for f in xrange(F):
+    db[f ]= np.sum(dout[:,f,:,:])
+         
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
